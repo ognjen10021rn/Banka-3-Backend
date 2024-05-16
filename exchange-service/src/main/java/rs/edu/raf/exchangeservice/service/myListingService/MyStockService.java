@@ -1,11 +1,15 @@
 package rs.edu.raf.exchangeservice.service.myListingService;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import rs.edu.raf.exchangeservice.client.BankServiceClient;
+import rs.edu.raf.exchangeservice.configuration.StockUpdateEvent;
+import rs.edu.raf.exchangeservice.configuration.StockWebSocketHandler;
 import rs.edu.raf.exchangeservice.domain.dto.buySell.BuySellStockDto;
 import rs.edu.raf.exchangeservice.domain.dto.bank.BankTransactionDto;
 import rs.edu.raf.exchangeservice.domain.model.enums.OrderStatus;
@@ -26,6 +30,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Service
 @RequiredArgsConstructor
 public class MyStockService {
+
+    private final ApplicationEventPublisher eventPublisher;
     private final MyStockRepository myStockRepository;
     private final TickerRepository tickerRepository;
     private final StockRepository stockRepository;
@@ -52,6 +58,7 @@ public class MyStockService {
         MyStock myStock = myStockRepository.findByTicker(ticker);
         myStock.setAmount(myStock.getAmount() + amount);
         myStockRepository.save(myStock);
+        eventPublisher.publishEvent(new StockUpdateEvent(this, myStock));
     }
 
     //vracamo sve deonice koje su u vlasnistvu banke
@@ -107,6 +114,7 @@ public class MyStockService {
         }
 
         stockOrderSell.setStatus(OrderStatus.PROCESSING);
+
         ordersToSell.add(stockOrderSellRepository.save(stockOrderSell));
     }
 
